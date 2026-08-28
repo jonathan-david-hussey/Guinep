@@ -7,4 +7,8 @@ import { AppService } from './app.service.js';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  getName(): string {
+    return AppModule.name;
+  }
+}
