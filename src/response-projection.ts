@@ -259,8 +259,9 @@ function applyNestedFilters(
   if (isRecord(response) && 'result' in response) {
     return {
       ...response,
-      result: transformNestedArrays(response['result'], (items) =>
-        applyResponseFilters(items, filters) as unknown[],
+      result: transformNestedArrays(
+        response['result'],
+        (items) => applyResponseFilters(items, filters) as unknown[],
       ),
     };
   }
