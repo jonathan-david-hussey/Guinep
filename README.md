@@ -1,117 +1,72 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Guinep
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Guinep turns selected HTTP API operations into tools that agents and applications can call. An operation spec defines the input schema, request mapping, authentication, execution rules, and response shape. Guinep validates the call, injects server-side credentials, sends the HTTP request, and returns a bounded, redacted result.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The service is built with NestJS and stores connections, drafts, and published operations in memory. They must be loaded or published again after a restart.
 
-## Description
+## Run locally
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Use Node.js `24.15.0` and npm `11.12.1` (see `.nvmrc` and `package.json`). In PowerShell:
 
-Guinep is a generic API wrapper backend core. It lets you define, validate,
-publish, and invoke HTTP operations from declarative specs.
-
-## Project setup
-
-```bash
-$ npm install
+```powershell
+npm ci
+$env:GUINEP_ADMIN_KEY = 'local-admin'
+$env:GUINEP_API_KEY = 'local-invoke'
+npm run start:dev
 ```
 
-## Compile and run the project
+On macOS or Linux, set the same environment variables before running `npm run start:dev`.
 
-```bash
-# development
-$ npm run start
+In a second PowerShell window, run the built-in helpdesk demo and list the tool it publishes:
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```powershell
+curl.exe -X POST http://localhost:3000/v1/demo/helpdesk/run -H "x-guinep-admin-key: local-admin"
+curl.exe http://localhost:3000/v1/agent-tools -H "x-guinep-api-key: local-invoke"
 ```
 
-## Run tests
+The demo uses a mocked helpdesk endpoint hosted by Guinep. It creates and validates a draft, tests it, publishes it, calls the resulting agent tool, and shows the context and security checks.
+
+## Define an operation
+
+An operation spec identifies a connection and describes how to turn validated input into an HTTP request. It can also set tool metadata, response transforms, retry rules, and execution limits. See the [helpdesk operation example](docs/helpdesk-ticket.example.json).
+
+The main lifecycle uses these endpoints:
+
+| Action                    | Endpoint                                                       | Key header           |
+| ------------------------- | -------------------------------------------------------------- | -------------------- |
+| Create a draft            | `POST /v1/operation-specs/drafts`                              | `x-guinep-admin-key` |
+| Validate or test a draft  | `POST /v1/operation-specs/drafts/:draftId/validate` or `/test` | `x-guinep-admin-key` |
+| Publish a draft           | `POST /v1/operation-specs/drafts/:draftId/publish`             | `x-guinep-admin-key` |
+| List published operations | `GET /v1/operations`                                           | `x-guinep-api-key`   |
+| Invoke an operation       | `POST /v1/operations/:operationId/invoke`                      | `x-guinep-api-key`   |
+
+Use `PUT /v1/operation-specs/drafts/:draftId` to update a draft. Published operation views and tool schemas expose agent-facing details without returning the connection secret or internal request policy.
+
+For startup publication, provide `GUINEP_CONFIG_FILE` or `GUINEP_CONFIG_JSON` with `connections` and `operations`; see the [startup config example](docs/startup-config.example.json). Connections can also be supplied through `GUINEP_CONNECTIONS`. Replace example endpoints and credentials before calling a real provider. Invalid startup operations stop the application from starting.
+
+## Call operations as tools
+
+- `GET /v1/agent-tools` lists published operations as agent-callable tools. `POST /v1/agent-tools/:toolName/call` invokes one by its tool name.
+- `POST /mcp` provides a stateless JSON-RPC endpoint for `tools/list` and `tools/call`. It requires the invoke key, matching MCP headers, and protocol version `2026-07-28` in both the header and request metadata. MCP capabilities come from the server-side `GUINEP_MCP_CAPABILITIES` setting.
+- `POST /v1/chat/context/prepare` checks material before model use. Related endpoints prepare memory writes, retrieved content, and rendered output; build system prompt constraints; and validate model output against JSON Schema.
+
+## Execution and safety
+
+Guinep checks input schemas and policies before mapping request fields. Connections hold credentials server-side. Operation policies control allowed hosts, schemes, methods, capabilities, approvals, call budgets, and request and response sizes. Outbound requests deny private-network targets and require HTTPS unless an operation explicitly allows otherwise.
+
+Responses can be reduced, sorted, filtered, and redacted. Guinep scans untrusted text and can quarantine unsafe content before it reaches an agent. Admins can inspect recorded security decisions at `GET /v1/security-events` using `x-guinep-admin-key`.
+
+## Checks and production build
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm test             # unit tests
+npm run test:e2e     # HTTP end-to-end tests
+npm run test:cov     # unit coverage
+npm run quality      # typecheck, lint, format, audit, build, and tests
+npm run build
+npm run start:prod
 ```
 
-## Deployment
+`npm run security:corpus` builds the service and evaluates the scanner against the public sources in `docs/security-corpus-sources.json`. It needs network access and writes `reports/security-corpus-report.json`. See [QUALITY.md](QUALITY.md) for the repository's quality thresholds.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The pre-commit hook also runs Habit Hooks. Its CLI and project configuration are external prerequisites for committing through that hook.
