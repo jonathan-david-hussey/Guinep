@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { AgentToolsController } from './agent-tools.controller.js';
 import { ApiKeyService } from './api-key.service.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { BootstrapConfigService } from './bootstrap-config.service.js';
+import { AgentToolService } from './core/agent-tool.service.js';
 import { AuditLogService } from './core/audit-log.service.js';
 import { AuthService } from './core/auth.service.js';
 import { ConnectionService } from './core/connection.service.js';
@@ -21,11 +24,13 @@ import { OperationSpecsController } from './operation-specs.controller.js';
 
 @Module({
   imports: [HttpModule],
-  controllers: [AppController, OperationSpecsController],
+  controllers: [AgentToolsController, AppController, OperationSpecsController],
   providers: [
+    AgentToolService,
     ApiKeyService,
     AppService,
     AuditLogService,
+    BootstrapConfigService,
     AuthService,
     ConnectionService,
     HttpExecutorService,

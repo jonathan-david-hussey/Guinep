@@ -25,6 +25,10 @@ interface ApiResponse {
   errors?: unknown[];
 }
 
+interface AgentToolListResponse {
+  tools: unknown[];
+}
+
 interface MockUpstream {
   url: string;
   calls: () => number;
@@ -54,6 +58,113 @@ describe('Guinep health API (e2e)', () => {
       .get('/')
       .expect(200)
       .expect('Hello World!');
+  });
+});
+
+describe('Guinep startup config API (e2e)', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    process.env['NODE_ENV'] = 'test';
+    process.env['GUINEP_ADMIN_KEY'] = 'admin';
+    process.env['GUINEP_API_KEY'] = 'invoke';
+    process.env['GUINEP_CONFIG_JSON'] = JSON.stringify(startupConfig());
+    app = await createListeningApp();
+  });
+
+  afterEach(async () => {
+    delete process.env['GUINEP_CONFIG_JSON'];
+    await app.close();
+  });
+
+  it('publishes configured tools during application startup', async () => {
+    await request(server(app))
+      .get('/v1/agent-tools')
+      .set('x-guinep-api-key', 'invoke')
+      .expect(200)
+      .expect((response) => {
+        expect(agentToolBody(response).tools).toEqual([
+          expect.objectContaining({
+            name: 'startup_helpdesk_ticket',
+            operationId: 'startup.helpdeskTicket.v1',
+          }),
+        ]);
+      });
+  });
+});
+
+describe('Guinep operation API (e2e)', () => {
+  const state = useStartedApp(jsonTicketHandler);
+
+  it('creates, validates, tests, publishes, lists, and invokes a JSON POST operation', async () => {
+    await createDraft(state.app, jsonSpec(state.upstream.url));
+    await request(server(state.app))
+      .post('/v1/operation-specs/drafts/helpdesk.createTicket/validate')
+      .set('x-guinep-admin-key', 'admin')
+      .expect(201);
+
+    const tested = await testDraft(state.app, { subject: 'Need help' });
+    expect(operationResponse(tested)).toMatchObject({
+      success: true,
+      providerStatus: 201,
+    });
+
+    await publishDraft(state.app);
+    await request(server(state.app))
+      .get('/v1/operations')
+      .set('x-guinep-api-key', 'invoke')
+      .expect(200)
+      .expect(assertPublicOperationList);
+    await request(server(state.app))
+      .get('/v1/operations/helpdesk.createTicket.v1')
+      .set('x-guinep-api-key', 'invoke')
+      .expect(200)
+      .expect(assertPublicOperation);
+    await request(server(state.app))
+      .get('/v1/operations/helpdesk.createTicket.v1/tool-schema')
+      .set('x-guinep-api-key', 'invoke')
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          operationId: 'helpdesk.createTicket.v1',
+          name: 'helpdesk_createTicket_v1',
+        });
+      });
+    await request(server(state.app))
+      .get('/v1/agent-tools')
+      .set('x-guinep-api-key', 'invoke')
+      .expect(200)
+      .expect((response) => {
+        expect(agentToolBody(response).tools).toEqual([
+          expect.objectContaining({
+            name: 'helpdesk_createTicket_v1',
+            operationId: 'helpdesk.createTicket.v1',
+          }),
+        ]);
+      });
+
+    const invoked = await invoke(state.app, 'helpdesk.createTicket.v1', {
+      subject: 'Need help',
+    });
+    expect(operationResponse(invoked)['data']).toEqual({
+      ticket: { id: 'T-1', subject: 'Need help' },
+    });
+  });
+
+  it('lets an agent call a published operation by tool name', async () => {
+    await createDraft(state.app, agentSpec(state.upstream.url));
+    await publishDraft(state.app);
+
+    const invoked = await request(server(state.app))
+      .post('/v1/agent-tools/create_helpdesk_ticket/call')
+      .set('x-guinep-api-key', 'invoke')
+      .send({ arguments: { subject: 'Need help' } })
+      .expect(200);
+
+    expect(operationResponse(invoked)).toMatchObject({
+      success: true,
+      providerStatus: 201,
+    });
   });
 });
 
@@ -218,6 +329,15 @@ async function createApp(
   return app;
 }
 
+async function createListeningApp(): Promise<INestApplication> {
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+  const app = moduleFixture.createNestApplication();
+  await app.listen(0, '127.0.0.1');
+  return app;
+}
+
 async function createDraft(
   app: INestApplication,
   spec: OperationSpec,
@@ -234,6 +354,17 @@ async function publishDraft(app: INestApplication): Promise<void> {
     .post('/v1/operation-specs/drafts/helpdesk.createTicket/publish')
     .set('x-guinep-admin-key', 'admin')
     .expect(201);
+}
+
+async function testDraft(
+  app: INestApplication,
+  input: Record<string, unknown>,
+): Promise<request.Response> {
+  return request(server(app))
+    .post('/v1/operation-specs/drafts/helpdesk.createTicket/test')
+    .set('x-guinep-admin-key', 'admin')
+    .send({ input })
+    .expect(200);
 }
 
 async function invoke(
@@ -293,6 +424,17 @@ function formSpec(baseUrl: string): OperationSpec {
   });
 }
 
+function agentSpec(baseUrl: string): OperationSpec {
+  return {
+    ...jsonSpec(baseUrl),
+    toolPolicy: {
+      name: 'create_helpdesk_ticket',
+      description: 'Create a helpdesk ticket.',
+    },
+    executionPolicy: { effects: ['ticket_create'] },
+  };
+}
+
 function connection(
   baseUrl: string,
   secrets: Record<string, string>,
@@ -313,6 +455,47 @@ function operationResponse(response: {
 }): Record<string, unknown> {
   const body = apiBody(response);
   return body.value as Record<string, unknown>;
+}
+
+function agentToolBody(response: { body: unknown }): AgentToolListResponse {
+  return response.body as AgentToolListResponse;
+}
+
+function assertPublicOperationList(response: request.Response): void {
+  expect(responseBody(response)).toMatchObject({
+    operations: [
+      {
+        operationId: 'helpdesk.createTicket.v1',
+        toolSchema: {
+          operationId: 'helpdesk.createTicket.v1',
+        },
+      },
+    ],
+  });
+  expect(serializedBody(response)).not.toContain('authPolicy');
+  expect(serializedBody(response)).not.toContain('securityPolicy');
+  expect(serializedBody(response)).not.toContain('apiKey');
+  expect(serializedBody(response)).toMatch(sha256Pattern());
+}
+
+function assertPublicOperation(response: request.Response): void {
+  expect(responseBody(response)).toMatchObject({
+    operationId: 'helpdesk.createTicket.v1',
+  });
+  expect(serializedBody(response)).not.toContain('authPolicy');
+  expect(serializedBody(response)).toMatch(sha256Pattern());
+}
+
+function responseBody(response: request.Response): unknown {
+  return response.body as unknown;
+}
+
+function serializedBody(response: request.Response): string {
+  return JSON.stringify(responseBody(response));
+}
+
+function sha256Pattern(): RegExp {
+  return /"sha256":"[a-f0-9]{64}"/u;
 }
 
 async function startUpstream(handler: UpstreamHandler): Promise<MockUpstream> {
@@ -421,4 +604,27 @@ function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
   res.setHeader('content-type', 'application/json');
   res.end(JSON.stringify(body));
+}
+
+function startupConfig(): Record<string, unknown> {
+  const operation = {
+    ...jsonSpec('https://api.example.test'),
+    id: 'startup.helpdeskTicket',
+    connectionId: 'startup',
+    toolPolicy: {
+      name: 'startup_helpdesk_ticket',
+      description: 'Create a helpdesk ticket from a short subject.',
+    },
+  };
+
+  return {
+    connections: [
+      {
+        id: 'startup',
+        baseUrl: 'https://api.example.test',
+        secrets: { apiKey: 'startup-secret' },
+      },
+    ],
+    operations: [operation],
+  };
 }
