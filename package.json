@@ -25,6 +25,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "quality": "npm run typecheck && npm run lint && npm run format:check && npm run security:audit && npm run build && npm run test:cov && npm run test:e2e",
     "security:audit": "npm audit --audit-level=low",
+    "security:corpus": "npm run build && node scripts/security-corpus-runner.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",

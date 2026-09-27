@@ -1,0 +1,213 @@
+[
+  {
+    "id": "mirza-akhi-prompt-injection-detection",
+    "name": "Prompt Injection Detection Dataset",
+    "url": "https://github.com/mirzaakhi/prompt-injection-detection-dataset",
+    "license": "CC-BY-4.0",
+    "access": {
+      "type": "githubRawCsv",
+      "url": "https://raw.githubusercontent.com/mirzaakhi/prompt-injection-detection-dataset/main/prompt_injection_dataset.csv",
+      "textFields": ["prompt"],
+      "labelField": "label",
+      "maliciousValues": ["malicious"],
+      "benignValues": ["benign"]
+    }
+  },
+  {
+    "id": "lakera-gandalf-ignore-instructions",
+    "name": "Lakera Gandalf Ignore Instructions",
+    "url": "https://huggingface.co/datasets/Lakera/gandalf_ignore_instructions",
+    "license": "MIT",
+    "access": {
+      "type": "huggingFaceRows",
+      "dataset": "Lakera/gandalf_ignore_instructions",
+      "config": "default",
+      "splits": ["train", "validation", "test"],
+      "textFields": ["prompt"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "lakera-mosscap-prompt-injection",
+    "name": "Lakera Mosscap Prompt Injection",
+    "url": "https://huggingface.co/datasets/Lakera/mosscap_prompt_injection",
+    "license": "MIT",
+    "access": {
+      "type": "huggingFaceRows",
+      "dataset": "Lakera/mosscap_prompt_injection",
+      "config": "default",
+      "splits": ["train", "validation", "test"],
+      "textFields": ["prompt"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "hackaprompt",
+    "name": "HackAPrompt Datasets",
+    "url": "https://huggingface.co/hackaprompt",
+    "license": "CC-BY-4.0",
+    "access": {
+      "type": "huggingFaceRows",
+      "dataset": "hackaprompt/hackaprompt-dataset",
+      "config": "default",
+      "splits": ["train"],
+      "textFields": ["prompt", "user_input", "submission"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "hackaprompt-pliny",
+    "name": "Pliny HackAPrompt Dataset",
+    "url": "https://huggingface.co/datasets/hackaprompt/Pliny_HackAPrompt_Dataset",
+    "license": "CC-BY-4.0",
+    "access": {
+      "type": "huggingFaceRows",
+      "dataset": "hackaprompt/Pliny_HackAPrompt_Dataset",
+      "config": "default",
+      "splits": ["train"],
+      "textFields": ["prompt", "submission", "user_input"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "deepset-prompt-injections",
+    "name": "deepset/prompt-injections",
+    "url": "https://huggingface.co/datasets/deepset/prompt-injections",
+    "license": "Apache-2.0",
+    "access": {
+      "type": "huggingFaceRows",
+      "dataset": "deepset/prompt-injections",
+      "config": "default",
+      "splits": ["train", "test"],
+      "textFields": ["text"],
+      "labelField": "label",
+      "maliciousValues": ["1", "true", "injection", "malicious"],
+      "benignValues": ["0", "false", "benign"]
+    }
+  },
+  {
+    "id": "open-prompt-injection",
+    "name": "Open-Prompt-Injection",
+    "url": "https://github.com/liu00222/Open-Prompt-Injection",
+    "license": "MIT",
+    "access": {
+      "type": "githubTree",
+      "owner": "liu00222",
+      "repo": "Open-Prompt-Injection",
+      "ref": "main",
+      "roots": ["data", "OpenPromptInjection"],
+      "extensions": [".json", ".jsonl", ".csv", ".txt"],
+      "textFields": ["prompt", "instruction", "input", "text", "attack"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "microsoft-bipia",
+    "name": "BIPIA",
+    "url": "https://github.com/microsoft/BIPIA",
+    "license": "see upstream source terms",
+    "access": {
+      "type": "githubTree",
+      "owner": "microsoft",
+      "repo": "BIPIA",
+      "ref": "main",
+      "roots": ["benchmark"],
+      "extensions": [".json", ".jsonl", ".csv", ".txt"],
+      "textFields": ["prompt", "instruction", "input", "context", "attack"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "agentdojo",
+    "name": "AgentDojo",
+    "url": "https://agentdojo.spylab.ai/",
+    "license": "MIT",
+    "access": {
+      "type": "githubTree",
+      "owner": "ethz-spylab",
+      "repo": "agentdojo",
+      "ref": "main",
+      "roots": ["src/agentdojo"],
+      "extensions": [".json", ".jsonl", ".yaml", ".yml", ".py"],
+      "textFields": ["prompt", "injection", "injection_task", "attacker_goal"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "aspi-benchmark",
+    "name": "ASPI Ambiguous State Prompt Injection",
+    "url": "https://huggingface.co/datasets/aspibenchmark/aspi-benchmark",
+    "license": "CC-BY-4.0",
+    "access": {
+      "type": "huggingFaceRows",
+      "dataset": "aspibenchmark/aspi-benchmark",
+      "config": "all",
+      "splits": ["test"],
+      "textFields": [
+        "attacker_goal",
+        "adversarial_clarification_answer",
+        "adversarial_clarification_answers"
+      ],
+      "defaultExpectedDetection": true,
+      "requiresAuthentication": true
+    }
+  },
+  {
+    "id": "bordair-dataset",
+    "name": "Bordair Multimodal Prompt Injection Dataset",
+    "url": "https://github.com/n1ps/bordair-dataset",
+    "license": "see upstream repository",
+    "access": {
+      "type": "githubTree",
+      "owner": "n1ps",
+      "repo": "bordair-dataset",
+      "ref": "main",
+      "roots": ["."],
+      "extensions": [".json", ".jsonl", ".csv"],
+      "textFields": [
+        "prompt",
+        "text",
+        "attack",
+        "image_content",
+        "doc_content",
+        "audio_content",
+        "expected_detection"
+      ],
+      "labelField": "expected_detection",
+      "maliciousValues": ["true", "1"],
+      "benignValues": ["false", "0"]
+    }
+  },
+  {
+    "id": "garak",
+    "name": "Garak Prompt Injection Probes",
+    "url": "https://docs.garak.ai/garak/examples/prompt-injection",
+    "license": "Apache-2.0",
+    "access": {
+      "type": "githubTree",
+      "owner": "NVIDIA",
+      "repo": "garak",
+      "ref": "main",
+      "roots": ["garak/probes", "garak/resources"],
+      "extensions": [".json", ".jsonl", ".txt", ".py"],
+      "textFields": ["prompt", "payload", "attack", "trigger", "goal"],
+      "defaultExpectedDetection": true
+    }
+  },
+  {
+    "id": "microsoft-pyrit",
+    "name": "Microsoft PyRIT Datasets and Scenarios",
+    "url": "https://microsoft.github.io/PyRIT/",
+    "license": "MIT",
+    "access": {
+      "type": "githubTree",
+      "owner": "microsoft",
+      "repo": "PyRIT",
+      "ref": "main",
+      "roots": ["pyrit/datasets", "pyrit/score", "pyrit/scenario"],
+      "extensions": [".json", ".jsonl", ".yaml", ".yml", ".txt"],
+      "textFields": ["prompt", "payload", "objective", "attack", "text"],
+      "defaultExpectedDetection": true
+    }
+  }
+]
