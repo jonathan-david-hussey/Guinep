@@ -25,6 +25,9 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+Guinep is a generic API wrapper backend core. It lets you define, validate,
+publish, and invoke HTTP operations from declarative specs.
+
 ## Project setup
 
 ```bash
