@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AgentToolsController } from './agent-tools.controller.js';
 import { ApiKeyService } from './api-key.service.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { BootstrapConfigService } from './bootstrap-config.service.js';
 import { ChatContextController } from './chat-context.controller.js';
+import { McpController } from './mcp.controller.js';
+import { McpUtilityService } from './mcp-utility.service.js';
 import { AgentToolService } from './core/agent-tool.service.js';
 import { AuditLogService } from './core/audit-log.service.js';
 import { AuthService } from './core/auth.service.js';
@@ -27,10 +30,11 @@ import { SystemPromptPolicyService } from './core/system-prompt-policy.service.j
 import { ToolSchemaService } from './core/tool-schema.service.js';
 import { ValidationService } from './core/validation.service.js';
 import { OperationSpecsController } from './operation-specs.controller.js';
+import { ResponseProjectionInterceptor } from './response-projection.js';
 
 @Module({
   imports: [HttpModule],
-  controllers: [AgentToolsController, AppController, ChatContextController, OperationSpecsController],
+  controllers: [AgentToolsController, AppController, ChatContextController, McpController, OperationSpecsController],
   providers: [
     AgentToolService,
     ApiKeyService,
@@ -43,12 +47,17 @@ import { OperationSpecsController } from './operation-specs.controller.js';
     HttpExecutorService,
     InputPolicyService,
     MappingService,
+    McpUtilityService,
     ModelOutputGuardService,
     OperationRegistryService,
     OperationRuntimeService,
     OutputSafetyService,
     RetrievalGuardService,
     ResponseService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseProjectionInterceptor,
+    },
     SecurityEventService,
     SecurityGuardService,
     SecurityService,
