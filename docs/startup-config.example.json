@@ -1,0 +1,79 @@
+{
+  "connections": [
+    {
+      "id": "helpdesk",
+      "baseUrl": "https://api.example.test",
+      "secrets": {
+        "apiKey": "replace-outside-source-control"
+      }
+    }
+  ],
+  "operations": [
+    {
+      "id": "helpdesk.createTicket",
+      "version": "v1",
+      "displayName": "Create helpdesk ticket",
+      "status": "draft",
+      "connectionId": "helpdesk",
+      "request": {
+        "method": "POST",
+        "path": "/tickets",
+        "contentType": "json",
+        "timeoutMs": 1000,
+        "mappings": [
+          {
+            "from": "$.subject",
+            "to": "body.subject",
+            "required": true
+          }
+        ]
+      },
+      "inputSchema": {
+        "type": "object",
+        "required": ["subject"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "toolPolicy": {
+        "name": "create_helpdesk_ticket",
+        "description": "Create a helpdesk ticket from a short subject."
+      },
+      "authPolicy": {
+        "type": "apiKeyHeader",
+        "headerName": "X-Api-Key",
+        "credentialRef": "connection.apiKey"
+      },
+      "responsePolicy": {
+        "success": {
+          "include": ["$.ticket.id", "$.ticket.subject"]
+        }
+      },
+      "securityPolicy": {
+        "allowedHosts": ["api.example.test"],
+        "allowedMethods": ["POST"],
+        "blockedRequestHeaders": ["Authorization", "Cookie", "Set-Cookie"],
+        "redactedRequestPaths": [],
+        "redactedResponsePaths": ["$.secret", "$.token", "$.password"]
+      },
+      "executionPolicy": {
+        "allowedSources": ["agent", "api", "mcp"],
+        "requiredCapabilities": [],
+        "effects": ["external_write", "creates_ticket"],
+        "approval": {
+          "mode": "never"
+        },
+        "budgets": {
+          "maxCallsPerRun": 10,
+          "maxRequestBytes": 8192,
+          "maxResponseBytes": 32768,
+          "maxToolCallDepth": 4,
+          "maxTextLength": 2000
+        }
+      }
+    }
+  ]
+}

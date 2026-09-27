@@ -1,0 +1,170 @@
+{
+  "id": "helpdesk.createTicket",
+  "version": "v1",
+  "displayName": "Create helpdesk ticket",
+  "status": "draft",
+  "connectionId": "mock-helpdesk",
+  "request": {
+    "method": "POST",
+    "path": "/tickets",
+    "contentType": "json",
+    "timeoutMs": 1000,
+    "mappings": [
+      {
+        "from": "$.subject",
+        "to": "body.subject",
+        "required": true
+      },
+      {
+        "from": "$.description",
+        "to": "body.description",
+        "required": true
+      },
+      {
+        "from": "$.requesterEmail",
+        "to": "body.requester.email",
+        "required": true
+      },
+      {
+        "from": "$.priority",
+        "to": "query.priority",
+        "defaultValue": "normal"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "required": ["subject", "description", "requesterEmail"],
+    "properties": {
+      "subject": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "requesterEmail": {
+        "type": "string",
+        "minLength": 3
+      },
+      "priority": {
+        "type": "string"
+      }
+    }
+  },
+  "inputPolicy": {
+    "unknownProperties": "reject",
+    "allowedPaths": [
+      "$.subject",
+      "$.description",
+      "$.requesterEmail",
+      "$.priority"
+    ],
+    "blockedPaths": ["$.internalTicketId", "$.credentials"],
+    "validators": [
+      {
+        "type": "requires",
+        "whenPath": "$.priority",
+        "whenEquals": "urgent",
+        "requiredPath": "$.description",
+        "code": "urgent_description_required",
+        "message": "Urgent tickets require a description."
+      }
+    ]
+  },
+  "toolPolicy": {
+    "name": "create_helpdesk_ticket",
+    "description": "Create a helpdesk ticket with a requester email and short issue description.",
+    "propertyOrder": ["subject", "description", "requesterEmail", "priority"],
+    "hiddenInputPaths": ["$.internalTicketId", "$.credentials"],
+    "provenance": {
+      "source": "mcp",
+      "packageName": "@guinep/helpdesk-tools",
+      "version": "1.0.0",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "signature": "signed-by-guinep-ci"
+    },
+    "examples": [
+      {
+        "subject": "Delivery issue",
+        "description": "Customer has not received the delivery.",
+        "requesterEmail": "customer@example.test",
+        "priority": "normal"
+      }
+    ]
+  },
+  "authPolicy": {
+    "type": "apiKeyHeader",
+    "headerName": "X-Api-Key",
+    "credentialRef": "connection.apiKey"
+  },
+  "responsePolicy": {
+    "success": {
+      "include": ["$.ticket.id", "$.ticket.subject", "$.ticket.status"]
+    },
+    "error": {
+      "rules": [
+        {
+          "status": 404,
+          "behavior": "return",
+          "code": "helpdesk_not_found",
+          "message": "The helpdesk resource was not found.",
+          "recoverable": true
+        },
+        {
+          "statusRange": {
+            "min": 500,
+            "max": 599
+          },
+          "behavior": "retry_then_return",
+          "code": "helpdesk_unavailable",
+          "message": "The helpdesk service is temporarily unavailable.",
+          "recoverable": true
+        },
+        {
+          "failureKind": "timeout",
+          "behavior": "return",
+          "code": "helpdesk_timeout",
+          "message": "The helpdesk service timed out.",
+          "recoverable": true
+        }
+      ]
+    }
+  },
+  "securityPolicy": {
+    "allowedHosts": ["127.0.0.1"],
+    "allowedMethods": ["POST"],
+    "blockedRequestHeaders": ["Authorization", "Cookie", "Set-Cookie"],
+    "redactedRequestPaths": [],
+    "redactedResponsePaths": ["$.secret", "$.token", "$.password"]
+  },
+  "executionPolicy": {
+    "allowedSources": ["agent", "api", "chat", "mcp", "n8n", "vapi"],
+    "requiredCapabilities": [],
+    "effects": ["external_write", "creates_ticket"],
+    "dataClasses": {
+      "$.requesterEmail": ["pii"],
+      "$.description": ["support_ticket"]
+    },
+    "approval": {
+      "mode": "never"
+    },
+    "budgets": {
+      "maxCallsPerRun": 3,
+      "maxRequestBytes": 8192,
+      "maxResponseBytes": 32768,
+      "maxToolCallDepth": 4,
+      "maxTextLength": 2000
+    }
+  },
+  "retryPolicy": {
+    "maxAttempts": 2,
+    "statusRanges": [
+      {
+        "min": 500,
+        "max": 599
+      }
+    ]
+  }
+}
