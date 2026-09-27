@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
+npm run habit
 npm run typecheck
 npm run lint
 npm run format:check
