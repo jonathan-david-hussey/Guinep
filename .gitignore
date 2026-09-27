@@ -1,3 +1,7 @@
+
+.tmp
+.habit-hooks
+
 # compiled output
 /dist
 /node_modules
